@@ -1,4 +1,5 @@
 import datetime
+import decimal
 import os
 import re
 import unittest
@@ -1094,10 +1095,10 @@ class TestNoDecimalPlaces(FieldValues):
 
 class TestRoundingDecimalField(TestCase):
     def test_valid_rounding(self):
-        field = serializers.DecimalField(max_digits=4, decimal_places=2, rounding='ROUND_UP')
+        field = serializers.DecimalField(max_digits=4, decimal_places=2, rounding=decimal.ROUND_UP)
         assert field.to_representation(Decimal('1.234')) == '1.24'
 
-        field = serializers.DecimalField(max_digits=4, decimal_places=2, rounding='ROUND_DOWN')
+        field = serializers.DecimalField(max_digits=4, decimal_places=2, rounding=decimal.ROUND_DOWN)
         assert field.to_representation(Decimal('1.234')) == '1.23'
 
     def test_invalid_rounding(self):
