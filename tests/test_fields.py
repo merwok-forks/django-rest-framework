@@ -1106,8 +1106,6 @@ class TestRoundingDecimalField(TestCase):
         assert 'Invalid rounding option' in str(excinfo.value)
 
 
-
-
 # Date & time serializers...
 
 class TestDateField(FieldValues):
