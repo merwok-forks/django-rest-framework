@@ -5,15 +5,21 @@ import unittest
 import uuid
 from decimal import Decimal
 
+import django
 import pytest
 from django.http import QueryDict
 from django.test import TestCase, override_settings
 from django.utils import six
-from django.utils.timezone import utc
+from django.utils.timezone import activate, deactivate, utc
 
 import rest_framework
-from rest_framework import serializers
+from rest_framework import compat, serializers
 from rest_framework.fields import is_simple_callable
+
+try:
+    import pytz
+except ImportError:
+    pytz = None
 
 try:
     import typings
@@ -501,6 +507,16 @@ class TestCreateOnlyDefault:
         assert serializer.validated_data['context_set'] == 'success'
 
 
+class Test5087Regression:
+    def test_parent_binding(self):
+        parent = serializers.Serializer()
+        field = serializers.CharField()
+
+        assert field.root is field
+        field.bind('name', parent)
+        assert field.root is parent
+
+
 # Tests for field input and output values.
 # ----------------------------------------
 
@@ -522,7 +538,8 @@ class FieldValues:
         Ensure that valid values return the expected validated data.
         """
         for input_value, expected_output in get_items(self.valid_inputs):
-            assert self.field.run_validation(input_value) == expected_output
+            assert self.field.run_validation(input_value) == expected_output, \
+                'input value: {}'.format(repr(input_value))
 
     def test_invalid_inputs(self):
         """
@@ -531,11 +548,13 @@ class FieldValues:
         for input_value, expected_failure in get_items(self.invalid_inputs):
             with pytest.raises(serializers.ValidationError) as exc_info:
                 self.field.run_validation(input_value)
-            assert exc_info.value.detail == expected_failure
+            assert exc_info.value.detail == expected_failure, \
+                'input value: {}'.format(repr(input_value))
 
     def test_outputs(self):
         for output_value, expected_output in get_items(self.outputs):
-            assert self.field.to_representation(output_value) == expected_output
+            assert self.field.to_representation(output_value) == expected_output, \
+                'output value: {}'.format(repr(output_value))
 
 
 # Boolean types...
@@ -576,7 +595,7 @@ class TestBooleanField(FieldValues):
             [],
             {},
         )
-        field = serializers.BooleanField()
+        field = self.field
         for input_value in inputs:
             with pytest.raises(serializers.ValidationError) as exc_info:
                 field.run_validation(input_value)
@@ -584,7 +603,7 @@ class TestBooleanField(FieldValues):
             assert exc_info.value.detail == expected
 
 
-class TestNullBooleanField(FieldValues):
+class TestNullBooleanField(TestBooleanField):
     """
     Valid and invalid values for `BooleanField`.
     """
@@ -703,6 +722,17 @@ class TestSlugField(FieldValues):
     }
     outputs = {}
     field = serializers.SlugField()
+
+    def test_allow_unicode_true(self):
+        field = serializers.SlugField(allow_unicode=True)
+
+        validation_error = False
+        try:
+            field.run_validation(u'slug-99-\u0420')
+        except serializers.ValidationError:
+            validation_error = True
+
+        assert not validation_error
 
 
 class TestURLField(FieldValues):
@@ -1062,6 +1092,22 @@ class TestNoDecimalPlaces(FieldValues):
     field = serializers.DecimalField(max_digits=6, decimal_places=None)
 
 
+class TestRoundingDecimalField(TestCase):
+    def test_valid_rounding(self):
+        field = serializers.DecimalField(max_digits=4, decimal_places=2, rounding='ROUND_UP')
+        assert field.to_representation(Decimal('1.234')) == '1.24'
+
+        field = serializers.DecimalField(max_digits=4, decimal_places=2, rounding='ROUND_DOWN')
+        assert field.to_representation(Decimal('1.234')) == '1.23'
+
+    def test_invalid_rounding(self):
+        with pytest.raises(AssertionError) as excinfo:
+            serializers.DecimalField(max_digits=1, decimal_places=1, rounding='ROUND_UNKNOWN')
+        assert 'Invalid rounding option' in str(excinfo.value)
+
+
+
+
 # Date & time serializers...
 
 class TestDateField(FieldValues):
@@ -1135,16 +1181,15 @@ class TestDateTimeField(FieldValues):
         '2001-01-01T13:00Z': datetime.datetime(2001, 1, 1, 13, 00, tzinfo=utc),
         datetime.datetime(2001, 1, 1, 13, 00): datetime.datetime(2001, 1, 1, 13, 00, tzinfo=utc),
         datetime.datetime(2001, 1, 1, 13, 00, tzinfo=utc): datetime.datetime(2001, 1, 1, 13, 00, tzinfo=utc),
-        # Django 1.4 does not support timezone string parsing.
-        '2001-01-01T13:00Z': datetime.datetime(2001, 1, 1, 13, 00, tzinfo=utc)
     }
     invalid_inputs = {
         'abc': ['Datetime has wrong format. Use one of these formats instead: YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z].'],
         '2001-99-99T99:00': ['Datetime has wrong format. Use one of these formats instead: YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z].'],
+        '2018-08-16 22:00-24:00': ['Datetime has wrong format. Use one of these formats instead: YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z].'],
         datetime.date(2001, 1, 1): ['Expected a datetime but got a date.'],
     }
     outputs = {
-        datetime.datetime(2001, 1, 1, 13, 00): '2001-01-01T13:00:00',
+        datetime.datetime(2001, 1, 1, 13, 00): '2001-01-01T13:00:00Z',
         datetime.datetime(2001, 1, 1, 13, 00, tzinfo=utc): '2001-01-01T13:00:00Z',
         '2001-01-01T00:00:00': '2001-01-01T00:00:00',
         six.text_type('2016-01-10T00:00:00'): '2016-01-10T00:00:00',
@@ -1152,6 +1197,11 @@ class TestDateTimeField(FieldValues):
         '': None,
     }
     field = serializers.DateTimeField(default_timezone=utc)
+
+
+if django.VERSION[:2] <= (1, 8):
+    # Doesn't raise an error on earlier versions of Django
+    TestDateTimeField.invalid_inputs.pop('2018-08-16 22:00-24:00')
 
 
 class TestCustomInputFormatDateTimeField(FieldValues):
@@ -1201,8 +1251,81 @@ class TestNaiveDateTimeField(FieldValues):
         '2001-01-01 13:00': datetime.datetime(2001, 1, 1, 13, 00),
     }
     invalid_inputs = {}
-    outputs = {}
+    outputs = {
+        datetime.datetime(2001, 1, 1, 13, 00): '2001-01-01T13:00:00',
+        datetime.datetime(2001, 1, 1, 13, 00, tzinfo=utc): '2001-01-01T13:00:00',
+    }
     field = serializers.DateTimeField(default_timezone=None)
+
+
+@pytest.mark.skipif(pytz is None, reason='pytz not installed')
+class TestTZWithDateTimeField(FieldValues):
+    """
+    Valid and invalid values for `DateTimeField` when not using UTC as the timezone.
+    """
+    @classmethod
+    def setup_class(cls):
+        # use class setup method, as class-level attribute will still be evaluated even if test is skipped
+        kolkata = pytz.timezone('Asia/Kolkata')
+
+        cls.valid_inputs = {
+            '2016-12-19T10:00:00': kolkata.localize(datetime.datetime(2016, 12, 19, 10)),
+            '2016-12-19T10:00:00+05:30': kolkata.localize(datetime.datetime(2016, 12, 19, 10)),
+            datetime.datetime(2016, 12, 19, 10): kolkata.localize(datetime.datetime(2016, 12, 19, 10)),
+        }
+        cls.invalid_inputs = {}
+        cls.outputs = {
+            datetime.datetime(2016, 12, 19, 10): '2016-12-19T10:00:00+05:30',
+            datetime.datetime(2016, 12, 19, 4, 30, tzinfo=utc): '2016-12-19T10:00:00+05:30',
+        }
+        cls.field = serializers.DateTimeField(default_timezone=kolkata)
+
+
+@pytest.mark.skipif(pytz is None, reason='pytz not installed')
+@override_settings(TIME_ZONE='UTC', USE_TZ=True)
+class TestDefaultTZDateTimeField(TestCase):
+    """
+    Test the current/default timezone handling in `DateTimeField`.
+    """
+
+    @classmethod
+    def setup_class(cls):
+        cls.field = serializers.DateTimeField()
+        cls.kolkata = pytz.timezone('Asia/Kolkata')
+
+    def test_default_timezone(self):
+        assert self.field.default_timezone() == utc
+
+    def test_current_timezone(self):
+        assert self.field.default_timezone() == utc
+        activate(self.kolkata)
+        assert self.field.default_timezone() == self.kolkata
+        deactivate()
+        assert self.field.default_timezone() == utc
+
+
+class TestNaiveDayLightSavingTimeTimeZoneDateTimeField(FieldValues):
+    """
+    Invalid values for `DateTimeField` with datetime in DST shift (non-existing or ambiguous) and timezone with DST.
+    Timezone America/New_York has DST shift from 2017-03-12T02:00:00 to 2017-03-12T03:00:00 and
+     from 2017-11-05T02:00:00 to 2017-11-05T01:00:00 in 2017.
+    """
+    valid_inputs = {}
+    invalid_inputs = {
+        '2017-03-12T02:30:00': ['Invalid datetime for the timezone "America/New_York".'],
+        '2017-11-05T01:30:00': ['Invalid datetime for the timezone "America/New_York".']
+    }
+    outputs = {}
+
+    class MockTimezone:
+        @staticmethod
+        def localize(value, is_dst):
+            raise compat.InvalidTimeError()
+
+        def __str__(self):
+            return 'America/New_York'
+
+    field = serializers.DateTimeField(default_timezone=MockTimezone())
 
 
 class TestTimeField(FieldValues):
@@ -1371,6 +1494,19 @@ class TestChoiceField(FieldValues):
         assert items[8].end_option_group
 
         assert items[9].value == 'boolean'
+
+    def test_edit_choices(self):
+        field = serializers.ChoiceField(
+            allow_null=True,
+            choices=[
+                1, 2,
+            ]
+        )
+        field.choices = [1]
+        assert field.run_validation(1) is 1
+        with pytest.raises(serializers.ValidationError) as exc_info:
+            field.run_validation(2)
+        assert exc_info.value.detail == ['"2" is not a valid choice.']
 
 
 class TestChoiceFieldWithType(FieldValues):
@@ -1776,6 +1912,7 @@ class TestJSONField(FieldValues):
     ]
     invalid_inputs = [
         ({'a': set()}, ['Value must be valid JSON.']),
+        ({'a': float('inf')}, ['Value must be valid JSON.']),
     ]
     outputs = [
         ({

@@ -61,7 +61,7 @@ Note that setting a `default` value implies that the field is not required. Incl
 
 ### `source`
 
-The name of the attribute that will be used to populate the field.  May be a method that only takes a `self` argument, such as `URLField(source='get_absolute_url')`, or may use dotted notation to traverse attributes, such as `EmailField(source='user.email')`.
+The name of the attribute that will be used to populate the field.  May be a method that only takes a `self` argument, such as `URLField(source='get_absolute_url')`, or may use dotted notation to traverse attributes, such as `EmailField(source='user.email')`. When serializing fields with dotted notation, it may be necessary to provide a `default` value if any object is not present or is empty during attribute traversal.
 
 The value `source='*'` has a special meaning, and is used to indicate that the entire object should be passed through to the field.  This can be useful for creating nested representations, or for fields which require access to the complete object in order to determine the output representation.
 
@@ -261,7 +261,7 @@ A decimal representation, represented in Python by a `Decimal` instance.
 
 Corresponds to `django.db.models.fields.DecimalField`.
 
-**Signature**: `DecimalField(max_digits, decimal_places, coerce_to_string=None, max_value=None, min_value=None)`
+**Signature**: `DecimalField(max_digits, decimal_places, coerce_to_string=None, max_value=None, min_value=None, localize=False, rounding=None)`
 
 - `max_digits` The maximum number of digits allowed in the number. It must be either `None` or an integer greater than or equal to `decimal_places`.
 - `decimal_places` The number of decimal places to store with the number.
@@ -269,6 +269,7 @@ Corresponds to `django.db.models.fields.DecimalField`.
 - `max_value` Validate that the number provided is no greater than this value.
 - `min_value` Validate that the number provided is no less than this value.
 - `localize` Set to `True` to enable localization of input and output based on the current locale. This will also force `coerce_to_string` to `True`. Defaults to `False`. Note that data formatting is enabled if you have set `USE_L10N=True` in your settings file.
+- `rounding` Set to one of the [rounding constants][decimal-rounding] from the decimal module to control the rounding mode for values.
 
 #### Example usage
 
@@ -276,13 +277,14 @@ To validate numbers up to 999 with a resolution of 2 decimal places, you would u
 
     serializers.DecimalField(max_digits=5, decimal_places=2)
 
+To request a specific rounding mode:
+
+    serializers.DecimalField(max_digits=5, decimal_places=2, rounding=decimal.ROUND_HALF_UP)
+
 And to validate numbers up to anything less than one billion with a resolution of 10 decimal places:
 
     serializers.DecimalField(max_digits=19, decimal_places=10)
 
-This field also takes an optional argument, `coerce_to_string`. If set to `True` the representation will be output as a string. If set to `False` the representation will be left as a `Decimal` instance and the final representation will be determined by the renderer.
-
-If unset, this will default to the same value as the `COERCE_DECIMAL_TO_STRING` setting, which is `True` unless set otherwise.
 
 ---
 
@@ -434,7 +436,7 @@ Requires either the `Pillow` package or `PIL` package.  The `Pillow` package is 
 
 A field class that validates a list of objects.
 
-**Signature**: `ListField(child, min_length=None, max_length=None)`
+**Signature**: `ListField(child=<A_FIELD_INSTANCE>, min_length=None, max_length=None)`
 
 - `child` - A field instance that should be used for validating the objects in the list. If this argument is not provided then objects in the list will not be validated.
 - `min_length` - Validates that the list contains no fewer than this number of elements.
@@ -457,7 +459,7 @@ We can now reuse our custom `StringListField` class throughout our application, 
 
 A field class that validates a dictionary of objects. The keys in `DictField` are always assumed to be string values.
 
-**Signature**: `DictField(child)`
+**Signature**: `DictField(child=<A_FIELD_INSTANCE>)`
 
 - `child` - A field instance that should be used for validating the values in the dictionary. If this argument is not provided then values in the mapping will not be validated.
 
@@ -641,7 +643,7 @@ The `.fail()` method is a shortcut for raising `ValidationError` that takes a me
 
         return Color(red, green, blue)
 
-This style keeps you error messages more cleanly separated from your code, and should be preferred.
+This style keeps your error messages cleaner and more separated from your code, and should be preferred.
 
 # Third party packages
 
@@ -670,6 +672,7 @@ The [django-rest-framework-hstore][django-rest-framework-hstore] package provide
 [cite]: https://docs.djangoproject.com/en/stable/ref/forms/api/#django.forms.Form.cleaned_data
 [html-and-forms]: ../topics/html-and-forms.md
 [FILE_UPLOAD_HANDLERS]: https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-FILE_UPLOAD_HANDLERS
+[decimal-rounding]: https://docs.python.org/library/decimal.html#rounding-modes
 [ecma262]: http://ecma-international.org/ecma-262/5.1/#sec-15.9.1.15
 [strftime]: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
 [django-widgets]: https://docs.djangoproject.com/en/stable/ref/forms/widgets/

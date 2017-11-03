@@ -330,7 +330,9 @@ For example, if you need to lookup objects based on multiple fields in the URL c
             for field in self.lookup_fields:
                 if self.kwargs[field]: # Ignore empty fields.
                     filter[field] = self.kwargs[field]
-            return get_object_or_404(queryset, **filter)  # Lookup the object
+            obj = get_object_or_404(queryset, **filter)  # Lookup the object
+            self.check_object_permissions(self.request, obj)
+            return obj
 
 You can then simply apply this mixin to a view or viewset anytime you need to apply the custom behavior.
 
@@ -390,4 +392,4 @@ The [django-rest-framework-bulk package][django-rest-framework-bulk] implements 
 [UpdateModelMixin]: #updatemodelmixin
 [DestroyModelMixin]: #destroymodelmixin
 [django-rest-framework-bulk]: https://github.com/miki725/django-rest-framework-bulk
-[django-rest-multiple-models]: https://github.com/Axiologue/DjangoRestMultipleModels
+[django-rest-multiple-models]: https://github.com/MattBroach/DjangoRestMultipleModels

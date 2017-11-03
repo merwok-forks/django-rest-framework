@@ -18,10 +18,10 @@
 </style>
 
 <p class="badges" height=20px>
-    <iframe src="http://ghbtns.com/github-btn.html?user=tomchristie&amp;repo=django-rest-framework&amp;type=watch&amp;count=true" class="github-star-button" allowtransparency="true" frameborder="0" scrolling="0" width="110px" height="20px"></iframe>
+    <iframe src="http://ghbtns.com/github-btn.html?user=encode&amp;repo=django-rest-framework&amp;type=watch&amp;count=true" class="github-star-button" allowtransparency="true" frameborder="0" scrolling="0" width="110px" height="20px"></iframe>
 
-    <a href="http://travis-ci.org/tomchristie/django-rest-framework?branch=master">
-        <img src="https://secure.travis-ci.org/tomchristie/django-rest-framework.svg?branch=master" class="status-badge">
+    <a href="http://travis-ci.org/encode/django-rest-framework?branch=master">
+        <img src="https://secure.travis-ci.org/encode/django-rest-framework.svg?branch=master" class="status-badge">
     </a>
 
     <a href="https://pypi.python.org/pypi/djangorestframework">
@@ -74,12 +74,11 @@ continued development by **[signing up for a paid plan][funding]**.
     <li><a href="https://getsentry.com/welcome/" style="background-image: url(https://fund-rest-framework.s3.amazonaws.com/sentry130.png)">Sentry</a></li>
     <li><a href="https://getstream.io/try-the-api/?utm_source=drf&utm_medium=banner&utm_campaign=drf" style="background-image: url(https://fund-rest-framework.s3.amazonaws.com/stream-130.png)">Stream</a></li>
     <li><a href="https://hello.machinalis.co.uk/" style="background-image: url(https://fund-rest-framework.s3.amazonaws.com/Machinalis130.png)">Machinalis</a></li>
-    <li><a href="https://rollbar.com" style="background-image: url(https://fund-rest-framework.s3.amazonaws.com/rollbar.png)">Rollbar</a></li>
-    <li><a href="https://micropyramid.com/django-rest-framework-development-services/" style="background-image: url(https://fund-rest-framework.s3.amazonaws.com/mp-text-logo.png)">MicroPyramid</a></li>
+    <li><a href="https://rollbar.com" style="background-image: url(https://fund-rest-framework.s3.amazonaws.com/rollbar2.png)">Rollbar</a></li>
 </ul>
 <div style="clear: both; padding-bottom: 20px;"></div>
 
-*Many thanks to all our [wonderful sponsors][sponsors], and in particular to our premium backers, [Rover](http://jobs.rover.com/), [Sentry](https://getsentry.com/welcome/), [Stream](https://getstream.io/?utm_source=drf&utm_medium=banner&utm_campaign=drf), [Machinalis](https://hello.machinalis.co.uk/), [Rollbar](https://rollbar.com), and [MicroPyramid](https://micropyramid.com/django-rest-framework-development-services/).*
+*Many thanks to all our [wonderful sponsors][sponsors], and in particular to our premium backers, [Rover](http://jobs.rover.com/), [Sentry](https://getsentry.com/welcome/), [Stream](https://getstream.io/?utm_source=drf&utm_medium=banner&utm_campaign=drf), [Machinalis](https://hello.machinalis.co.uk/), and [Rollbar](https://rollbar.com).*
 
 ---
 
@@ -87,8 +86,8 @@ continued development by **[signing up for a paid plan][funding]**.
 
 REST framework requires the following:
 
-* Python (2.7, 3.2, 3.3, 3.4, 3.5)
-* Django (1.8, 1.9, 1.10)
+* Python (2.7, 3.2, 3.3, 3.4, 3.5, 3.6)
+* Django (1.10, 1.11, 2.0 alpha)
 
 The following packages are optional:
 
@@ -108,7 +107,7 @@ Install using `pip`, including any optional packages you want...
 
 ...or clone the project from github.
 
-    git clone git@github.com:tomchristie/django-rest-framework.git
+    git clone git@github.com:encode/django-rest-framework.git
 
 Add `'rest_framework'` to your `INSTALLED_APPS` setting.
 
@@ -248,6 +247,7 @@ General guides to using REST framework.
 * [3.4 Announcement][3.4-announcement]
 * [3.5 Announcement][3.5-announcement]
 * [3.6 Announcement][3.6-announcement]
+* [3.7 Announcement][3.7-announcement]
 * [Kickstarter Announcement][kickstarter-announcement]
 * [Mozilla Grant][mozilla-grant]
 * [Funding][funding]
@@ -310,8 +310,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 [markdown]: http://pypi.python.org/pypi/Markdown/
 [django-filter]: http://pypi.python.org/pypi/django-filter
 [django-crispy-forms]: https://github.com/maraujop/django-crispy-forms
-[django-guardian]: https://github.com/lukaszb/django-guardian
-[0.4]: https://github.com/tomchristie/django-rest-framework/tree/0.4.X
+[django-guardian]: https://github.com/django-guardian/django-guardian
+[0.4]: https://github.com/encode/django-rest-framework/tree/0.4.X
 [image]: img/quickstart.png
 [index]: .
 [oauth1-section]: api-guide/authentication/#django-rest-framework-oauth
@@ -378,6 +378,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 [3.4-announcement]: topics/3.4-announcement.md
 [3.5-announcement]: topics/3.5-announcement.md
 [3.6-announcement]: topics/3.6-announcement.md
+[3.7-announcement]: topics/3.7-announcement.md
 [kickstarter-announcement]: topics/kickstarter-announcement.md
 [mozilla-grant]: topics/mozilla-grant.md
 [funding]: topics/funding.md

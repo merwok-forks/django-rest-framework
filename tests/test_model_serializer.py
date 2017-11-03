@@ -21,7 +21,7 @@ from django.test import TestCase
 from django.utils import six
 
 from rest_framework import serializers
-from rest_framework.compat import set_many, unicode_repr
+from rest_framework.compat import unicode_repr
 
 
 def dedent(blocktext):
@@ -63,6 +63,7 @@ class RegularFieldsModel(models.Model):
     slug_field = models.SlugField(max_length=100)
     small_integer_field = models.SmallIntegerField()
     text_field = models.TextField(max_length=100)
+    file_field = models.FileField(max_length=100)
     time_field = models.TimeField()
     url_field = models.URLField(max_length=100)
     custom_field = CustomField()
@@ -97,6 +98,15 @@ class Issue3674ParentModel(models.Model):
 class Issue3674ChildModel(models.Model):
     parent = models.ForeignKey(Issue3674ParentModel, related_name='children', on_delete=models.CASCADE)
     value = models.CharField(primary_key=True, max_length=64)
+
+
+class UniqueChoiceModel(models.Model):
+    CHOICES = (
+        ('choice1', 'choice 1'),
+        ('choice2', 'choice 1'),
+    )
+
+    name = models.CharField(max_length=254, unique=True, choices=CHOICES)
 
 
 class TestModelSerializer(TestCase):
@@ -172,6 +182,7 @@ class TestRegularFieldMappings(TestCase):
                 slug_field = SlugField(max_length=100)
                 small_integer_field = IntegerField()
                 text_field = CharField(max_length=100, style={'base_template': 'textarea.html'})
+                file_field = FileField(max_length=100)
                 time_field = TimeField()
                 url_field = URLField(max_length=100)
                 custom_field = ModelField(model_field=<tests.test_model_serializer.CustomField: custom_field>)
@@ -515,6 +526,37 @@ class TestRelationalFieldMappings(TestCase):
         """)
         self.assertEqual(unicode_repr(TestSerializer()), expected)
 
+    def test_nested_hyperlinked_relations_starred_source(self):
+        class TestSerializer(serializers.HyperlinkedModelSerializer):
+            class Meta:
+                model = RelationalModel
+                depth = 1
+                fields = '__all__'
+
+                extra_kwargs = {
+                    'url': {
+                        'source': '*',
+                    }}
+
+        expected = dedent("""
+            TestSerializer():
+                url = HyperlinkedIdentityField(source='*', view_name='relationalmodel-detail')
+                foreign_key = NestedSerializer(read_only=True):
+                    url = HyperlinkedIdentityField(view_name='foreignkeytargetmodel-detail')
+                    name = CharField(max_length=100)
+                one_to_one = NestedSerializer(read_only=True):
+                    url = HyperlinkedIdentityField(view_name='onetoonetargetmodel-detail')
+                    name = CharField(max_length=100)
+                many_to_many = NestedSerializer(many=True, read_only=True):
+                    url = HyperlinkedIdentityField(view_name='manytomanytargetmodel-detail')
+                    name = CharField(max_length=100)
+                through = NestedSerializer(many=True, read_only=True):
+                    url = HyperlinkedIdentityField(view_name='throughtargetmodel-detail')
+                    name = CharField(max_length=100)
+        """)
+        self.maxDiff = None
+        self.assertEqual(unicode_repr(TestSerializer()), expected)
+
     def test_nested_unique_together_relations(self):
         class TestSerializer(serializers.HyperlinkedModelSerializer):
             class Meta:
@@ -661,8 +703,7 @@ class TestIntegration(TestCase):
             foreign_key=self.foreign_key_target,
             one_to_one=self.one_to_one_target,
         )
-        set_many(self.instance, 'many_to_many', self.many_to_many_targets)
-        self.instance.save()
+        self.instance.many_to_many.set(self.many_to_many_targets)
 
     def test_pk_retrival(self):
         class TestSerializer(serializers.ModelSerializer):
@@ -1080,3 +1121,37 @@ class Issue4897TestCase(TestCase):
         with pytest.raises(AssertionError) as cm:
             TestSerializer(obj).fields
         cm.match(r'readonly_fields')
+
+
+class Test5004UniqueChoiceField(TestCase):
+    def test_unique_choice_field(self):
+        class TestUniqueChoiceSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = UniqueChoiceModel
+                fields = '__all__'
+
+        UniqueChoiceModel.objects.create(name='choice1')
+        serializer = TestUniqueChoiceSerializer(data={'name': 'choice1'})
+        assert not serializer.is_valid()
+        assert serializer.errors == {'name': ['unique choice model with this name already exists.']}
+
+
+class TestFieldSource(TestCase):
+    def test_named_field_source(self):
+        class TestSerializer(serializers.ModelSerializer):
+
+            class Meta:
+                model = RegularFieldsModel
+                fields = ('number_field',)
+                extra_kwargs = {
+                    'number_field': {
+                        'source': 'integer_field'
+                    }
+                }
+
+        expected = dedent("""
+            TestSerializer():
+                number_field = IntegerField(source='integer_field')
+        """)
+        self.maxDiff = None
+        self.assertEqual(unicode_repr(TestSerializer()), expected)

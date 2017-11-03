@@ -35,7 +35,7 @@ The wrappers also provide behaviour such as returning `405 Method Not Allowed` r
 
 Okay, let's go ahead and start using these new components to write a few views.
 
-We don't need our `JSONResponse` class in `views.py` anymore, so go ahead and delete that.  Once that's done we can start refactoring our views slightly.
+We don't need our `JSONResponse` class in `views.py` any more, so go ahead and delete that.  Once that's done we can start refactoring our views slightly.
 
     from rest_framework import status
     from rest_framework.decorators import api_view
@@ -47,7 +47,7 @@ We don't need our `JSONResponse` class in `views.py` anymore, so go ahead and de
     @api_view(['GET', 'POST'])
     def snippet_list(request):
         """
-        List all snippets, or create a new snippet.
+        List all code snippets, or create a new snippet.
         """
         if request.method == 'GET':
             snippets = Snippet.objects.all()
@@ -68,7 +68,7 @@ Here is the view for an individual snippet, in the `views.py` module.
     @api_view(['GET', 'PUT', 'DELETE'])
     def snippet_detail(request, pk):
         """
-        Retrieve, update or delete a snippet instance.
+        Retrieve, update or delete a code snippet.
         """
         try:
             snippet = Snippet.objects.get(pk=pk)
